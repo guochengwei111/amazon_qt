@@ -354,7 +354,13 @@ class MainWindow(QWidget):
         """
         # 为每一行创建一个线程（记录创建的所有线程）
         # self是当前的窗口对象，回调函数有调度器的信号connect触发
-        self.scheduler.start(self, BASE_DIR, self.task_start_callback, self.task_counter_callback)
+        self.scheduler.start(
+            self,
+            BASE_DIR,
+            self.task_start_callback,
+            self.task_counter_callback,
+            self.task_stop_callback,
+        )
 
         # 状态显示执行中 【线程个数为0，修改状态】
         self.update_status_message("执行中")
@@ -391,6 +397,18 @@ class MainWindow(QWidget):
         cell_status.setTextAlignment(Qt.AlignHCenter | Qt.AlignVCenter)
         self.table_widget.setItem(row_index, 4, cell_status)
 
+    def task_stop_callback(self, row_index):
+        """
+        停止后修改当前行的执行状态
+        :param row_index:当前行索引
+        :return:
+        """
+        cell_status = QTableWidgetItem()
+        cell_status.setText(STATUS_MAPPING[1])
+        cell_status.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
+        cell_status.setTextAlignment(Qt.AlignHCenter | Qt.AlignVCenter)
+        self.table_widget.setItem(row_index, 6, cell_status)
+
     def event_stop_click(self):
         """
         停止按钮
@@ -398,7 +416,7 @@ class MainWindow(QWidget):
         """
         # 逐一停止每一个线程
 
-        self.scheduler.stop()
+        # self.scheduler.stop(self.update_status_message)
         # 状态显示执行中 【线程个数为0，修改状态】
         self.update_status_message("未检测")
 

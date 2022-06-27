@@ -27,6 +27,7 @@ class NewTaskThread(QThread):
 
 class TaskThread(QThread):
     start_signal = pyqtSignal(int)
+    stop_signal = pyqtSignal(int)
     count_signal = pyqtSignal(int, bool)
 
     def __init__(self, *args, **kwargs):
@@ -41,6 +42,13 @@ class TaskThread(QThread):
         time.sleep(3)
         self.start_signal.emit(self.row_index)
         while True:
+            # scheduler 对象里面有一个terminate属性，更具它的值来判断是否结束线程
+            if self.scheduler.terminate:
+                # 如果点击停止，则停止线程,并且修改当前行的状态
+                self.stop_signal.emit(self.row_index)
+                # self就是指当前的线程对象，调用scheduler对象里面的方法，列表移除对象本身，并return结束
+                self.scheduler.destroy_thread(self)
+                return
             time.sleep(randint(2, 5))
             if not Path(self.log_file_path).exists():
                 print("日志文件不存在{}".format(self.asin))
@@ -55,3 +63,26 @@ class TaskThread(QThread):
                     f.write(str(self.row_index)+"\n")
             self.count_signal.emit(self.row_index, True)
 
+
+class StopThread(QThread):
+    """
+    停止按钮，监控线程列表的个数
+    """
+    update_signal = pyqtSignal(str)
+
+    def __init__(self):
+        super(StopThread, self).__init__()
+        self.scheduler = None
+
+    def run(self) -> None:
+        # 监测线程的数量
+        total_count = len(self.scheduler.thread_list)  # 总线程数量
+        while True:
+            running_count = len(self.scheduler.thread_list)  # 剩余线程数量
+            # 更新页面
+            self.update_signal.emit("正在终止，存活线程：{}/{}".format(running_count, total_count))
+            if running_count == 0:
+                self.update_signal.emit("已终止")
+                break
+            time.sleep(1)
+        pass
